@@ -1,0 +1,68 @@
+config:
+  default:
+    serviceName: user-service
+    port: 3009
+  environment:
+    dev:
+      cpu: 256
+      memory: 512
+      runDatadogAgent: true
+      datadogAgentConfig:
+        dd_unit: qoala
+        dd_env: dev
+        dd_apm: true
+        dd_image: 733346176650.dkr.ecr.ap-southeast-3.amazonaws.com/datadog-agent:7
+        dd_api_key: /qoala/dev/datadog/api_key
+      secretsWildcard: /qoala/dev/app/user-service
+      reservedSecrets:
+        - name: "BROKER_TRANSPORT"
+          valueFrom: "arn:aws:ssm:ap-southeast-1:733346176650:parameter/qoala/dev/nats/host"
+
+    staging:
+      cpu: 256
+      memory: 512
+      runDatadogAgent: false
+      secretsWildcard: /qoala/staging/app/user-service
+      reservedSecrets:
+        - name: DB_USERNAME
+          valueFrom: arn:aws:ssm:ap-southeast-1:578425475216:parameter/qoala/staging/db/backend_user
+        - name: DB_HOST
+          valueFrom: arn:aws:ssm:ap-southeast-1:578425475216:parameter/qoala/staging/db/backend_host
+        - name: DB_PASSWORD
+          valueFrom: arn:aws:ssm:ap-southeast-1:578425475216:parameter/qoala/staging/db/backend_password
+        - name: REDIS_CONNECTION_STRING
+          valueFrom: arn:aws:ssm:ap-southeast-1:578425475216:parameter/qoala/staging/redis/connection_string
+        - name: BROKER_TRANSPORTER
+          valueFrom: arn:aws:ssm:ap-southeast-1:578425475216:parameter/qoala/staging/nats/host
+    prod:
+      cpu: 256
+      memory: 512
+      runDatadogAgent: true
+      datadogAgentConfig:
+        dd_unit: qoala
+        dd_env: prod
+        dd_apm: true
+        dd_image: 733346176650.dkr.ecr.ap-southeast-3.amazonaws.com/datadog-agent:7
+        dd_api_key: /qoala/prod/datadog/api_key
+      secretsWildcard: /qoala/prod/app/user-service
+
+    uat: 
+      cpu: 256
+      memory: 512
+      limits: 
+        cpu: 512
+        memory: 1024
+      secretsWildcard: /qoala/prod/app/user-service
+      reservedSecrets:
+        LEAD_QOALA_DATABASE_USER: /qoala/prod/db/volo-backend/lead-service/username
+        LEAD_QOALA_DATABASE_PASSWORD: /qoala/prod/db/volo-backend/lead-service/password
+        LEAD_QOALA_DATABASE_HOST: /qoala/prod/db/volo-backend/host
+      labels:
+        BU: Tribe-1
+        Env: uat
+      roleArn: arn:aws:iam::733346176650:role/ecsTaskExecutionRoleDev
+      api:
+        host: uat-api.qoala.app
+        path:
+          - /api/xyz/(.*)
+          - /api/second/(.*)

@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    outputs:
+      image_registry: ${{ steps.publish_image.outputs.image_registry }}
+      image_meta: ${{ steps.vars.outputs.sha_short }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Declare Github commit hash
+        id: vars
+        shell: bash
+        run: |
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      # -
+      #   name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v2
+      # -
+      #   name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v2
+      # -
+      #   name: Login to DockerHub
+      #   uses: docker/login-action@v2
+      #   with:
+      #     username: almasaabi
+      #     password: Ad3l@#zDocker
+      # -
+      #   name: Build and push
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     push: true
+      #     context: .
+      #     tags: |
+      #       almasaabi/nginx:latest-dev
+      #       almasaabi/nginx:${{ steps.vars.outputs.sha_short }}
+
+      - name: Checkout SSM Injection
+        uses: actions/checkout@v2
+        with:
+          repository: qoala-engineering/helm-values-ssm-injection
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: .github/actions/helm-values-ssm-injection
+
+      - name: SSM Injection
+        id: values
+        uses: ./.github/actions/aws-ecs-codedeploy-action
+        with:
+          image: almasaabi/nginx:latest
+          environment: uat
+          configPath: ./iac/service.config.yaml
+          
+      - name: Values file content
+        id: vars
+        shell: bash
+        run: |
+          cat ${{ steps.values.outputs.values }}
+      
+        
