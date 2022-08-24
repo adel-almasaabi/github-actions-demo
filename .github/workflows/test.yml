@@ -1,13 +1,17 @@
-name: ci
-
 on:
   push:
     branches:
-      - 'main'
-
+      - 'master'
+env:
+  NS: uat-qoala
+  EKS_CLUSTER_NAME: qoala-dev-cluster
+  ENV: uat
+  ROLE: arn:aws:iam::744994327583:role/eks-qoala-dev-cluster-ci-role
+  
 jobs:
-  docker:
-    runs-on: ubuntu-latest
+  helm-deployment:
+    runs-on: [self-hosted, eks-runner]
+
     outputs:
       image_registry: ${{ steps.publish_image.outputs.image_registry }}
       image_meta: ${{ steps.vars.outputs.sha_short }}
@@ -21,47 +25,39 @@ jobs:
         run: |
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
-      # -
-      #   name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v2
-      # -
-      #   name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v2
-      # -
-      #   name: Login to DockerHub
-      #   uses: docker/login-action@v2
-      #   with:
-      #     username: almasaabi
-      #     password: Ad3l@#zDocker
-      # -
-      #   name: Build and push
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     context: .
-      #     tags: |
-      #       almasaabi/nginx:latest-dev
-      #       almasaabi/nginx:${{ steps.vars.outputs.sha_short }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        with:
+          repository: qoala-engineering/setup-eks-helm-action
+          token: ${{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/setup-eks-helm-action
+
+      - uses: ./.github/actions/setup-eks-helm-action
+        with:
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ env.ROLE }}
+          github-token: ${{ secrets.GIT_HUB_TOKEN }}
+          cluster-name: ${{ env.EKS_CLUSTER_NAME }}
 
       - name: Checkout SSM Injection
         uses: actions/checkout@v2
         with:
           repository: qoala-engineering/helm-values-ssm-injection
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GIT_HUB_TOKEN }}
           path: .github/actions/helm-values-ssm-injection
 
       - name: SSM Injection
         id: values
-        uses: ./.github/actions/aws-ecs-codedeploy-action
+        uses: ./.github/actions/helm-values-ssm-injection
         with:
           image: almasaabi/nginx:latest
-          environment: uat
-          configPath: ./iac/service.config.yaml
+          environment: ${{ env.ENV }}
+          configPath: iac/service.config.yaml
           
       - name: Values file content
         id: vars
         shell: bash
         run: |
-          cat ${{ steps.values.outputs.values }}
+          cat ${{ steps.values.outputs.values }} && ls charts
       
         

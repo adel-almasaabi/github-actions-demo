@@ -47,11 +47,11 @@ config:
       secretsWildcard: /qoala/prod/app/user-service
 
     uat: 
-      cpu: 256
-      memory: 512
+      cpu: 64
+      memory: 128
       limits: 
-        cpu: 512
-        memory: 1024
+        cpu: 
+        memory: 
       secretsWildcard: /qoala/prod/app/user-service
       reservedSecrets:
         LEAD_QOALA_DATABASE_USER: /qoala/prod/db/volo-backend/lead-service/username
